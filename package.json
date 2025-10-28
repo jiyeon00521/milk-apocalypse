@@ -1,0 +1,24 @@
+{
+  "name": "milk-apocalypse",
+  "version": "1.0.0",
+  "description": "우유 아포칼립스",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.yourname.milkapocalypse",
+    "productName": "Milk Apocalypse",
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "devDependencies": {
+    "electron": "^32.1.0",
+    "electron-builder": "^24.13.3"
+  }
+}

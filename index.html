@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>우유 아포칼립스</title>
+<style>
+body { 
+  margin:0; 
+  padding:0;
+  overflow:hidden; 
+  background:#000; 
+  display:flex; 
+  justify-content:center; 
+  align-items:center; 
+  height:100vh; 
+  width:100vw;
+  position:relative;
+}
+#gameCanvas { 
+  background:#000; 
+  cursor:pointer; 
+  display:block;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+}
+.button { display:inline-block; padding:5px 10px; font-size:16px; color:white; background-color:#444; border:none; cursor:pointer; }
+.button:hover { background-color:#555; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="1280" height="720"></canvas>
+<div id="menu" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none;">
+  <h1 style="color:white; margin-bottom:30px;">우유 아포칼립스</h1>
+  <div style="color:white; margin-bottom:20px; font-size:18px;">
+    <p><span id="nicknameDisplay" style="color:#ffd700; font-weight:bold;">플레이어</span>의 프로필</p>
+    <p>레벨: <span id="profileLevel">1</span> | 경험치: <span id="profileExp">0</span> / <span id="profileExpNext">100</span></p>
+  </div>
+  <button class="button" id="profileBtn" style="padding:10px 30px; font-size:18px; margin:10px;">프로필</button>
+  <button class="button" id="startBtn" style="padding:15px 40px; font-size:24px; margin:10px;">게임 시작</button>
+  <button class="button" id="loadBtn" style="padding:15px 40px; font-size:24px; margin:10px;">불러오기</button>
+  <input type="file" id="loadFile" accept=".json" style="display:none;">
+</div>
+<div id="nicknameMenu" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; width:500px; background:rgba(0,0,0,0.95); padding:40px; border:3px solid white; border-radius:10px;">
+  <h1 style="color:white; margin-bottom:30px;">우유 아포칼립스</h1>
+  <p style="color:white; margin-bottom:20px;">새로운 프로필을 생성하거나<br>기존 프로필을 불러오세요</p>
+  <input type="text" id="nicknameInput" maxlength="12" placeholder="닉네임 (최대 12자)" style="padding:15px; font-size:18px; width:80%; margin-bottom:20px; text-align:center;">
+  <br>
+  <button class="button" id="nicknameConfirmBtn" style="padding:15px 40px; font-size:20px; margin:10px;">새 프로필 생성</button>
+  <br>
+  <button class="button" id="loadProfileBtn" style="padding:10px 30px; font-size:16px; margin:10px;">프로필 불러오기</button>
+  <input type="file" id="loadProfileFile" accept=".json" style="display:none;">
+</div>
+<div id="profileMenu" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; width:900px; background:rgba(0,0,0,0.95); padding:40px; border:3px solid white; border-radius:10px;">
+  <h1 style="color:white; margin-bottom:10px;"><span id="profileNickname" style="color:#ffd700;">플레이어</span>의 프로필</h1>
+  <div style="color:white; margin-bottom:30px;">
+    <p style="font-size:24px; margin:10px;">레벨: <span id="profileLevel2">1</span></p>
+    <p style="font-size:18px; margin:10px;">경험치: <span id="profileExp2">0</span> / <span id="profileExpNext2">100</span></p>
+    <div style="width:100%; height:30px; background:#333; margin:20px 0; border-radius:15px; overflow:hidden;">
+      <div id="expBar" style="width:0%; height:100%; background:linear-gradient(90deg, #4CAF50, #8BC34A); transition:width 0.3s;"></div>
+    </div>
+  </div>
+  <div style="margin:30px 0;">
+    <h2 style="color:#ffd700; margin-bottom:20px;">스킨 선택</h2>
+    <div style="display:flex; justify-content:center; gap:20px; margin-bottom:20px;">
+      <div style="text-align:center;">
+        <p style="color:white; margin-bottom:10px;">플레이어 스킨</p>
+        <select id="playerSkinSelect" style="padding:10px; font-size:16px; width:200px;">
+          <option value="player.png">기본 스킨</option>
+          <option value="player3.png">스킨 1</option>
+          <option value="player4.png">스킨 2</option>
+          <option value="player5.png">스킨 3</option>
+        </select>
+      </div>
+      <div style="text-align:center;">
+        <p style="color:white; margin-bottom:10px;">용병 스킨</p>
+        <select id="mercSkinSelect" style="padding:10px; font-size:16px; width:200px;">
+          <option value="mercenary.png">기본 스킨</option>
+          <option value="mercenary2.png">스킨 1</option>
+          <option value="mercenary3.png">스킨 2</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="perksList" style="margin:30px 0; color:white;"></div>
+  <div style="margin-top:30px;">
+    <button class="button" id="profileCloseBtn" style="padding:10px 30px; font-size:18px; margin:5px;">닫기</button>
+    <button class="button" id="saveProfileBtn" style="padding:10px 30px; font-size:18px; margin:5px;">프로필 저장</button>
+  </div>
+</div>
+<div id="perkMenu" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; width:1100px;">
+  <h1 style="color:white; margin-bottom:30px;">특전 선택</h1>
+  <p style="color:#ffd700; font-size:20px; margin-bottom:20px;">사용 가능한 특전: <span id="availablePerks">0</span>개</p>
+  <div id="perkCards" style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px;"></div>
+  <button class="button" id="perkConfirmBtn" style="padding:15px 40px; font-size:24px; margin-top:30px;">확인</button>
+</div>
+<div id="traitMenu" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; width:1100px;">
+  <h1 style="color:white; margin-bottom:30px;">특성을 선택하세요</h1>
+  <div id="traitCards" style="display:flex; justify-content:space-between; gap:20px;"></div>
+</div>
+<div id="gameOverMenu" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none;">
+  <h1 id="gameOverTitle" style="color:white; margin-bottom:20px;">게임 오버</h1>
+  <p style="color:#ffd700; font-size:24px; margin-bottom:10px;">최종 라운드: <span id="finalRound">1</span></p>
+  <p style="color:#4CAF50; font-size:20px; margin-bottom:30px;">획득 경험치: <span id="gainedExp">0</span></p>
+  <button class="button" id="restartBtn" style="padding:15px 40px; font-size:24px;">메인 메뉴</button>
+</div>
+
+<audio id="pistolSound" src="pistol.mp3"></audio>
+<audio id="rifleSound" src="rifle.mp3"></audio>
+<audio id="reloadSound" src="reload.mp3"></audio>
+<audio id="emptyGunClick" src="emptyGunClick.mp3"></audio>
+<audio id="bgm" src="backgroundMusic.mp3" loop></audio>
+
+<script>
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const menu=document.getElementById('menu');
+const traitMenu=document.getElementById('traitMenu');
+const traitCards=document.getElementById('traitCards');
+const gameOverMenu=document.getElementById('gameOverMenu');
+const gameOverTitle=document.getElementById('gameOverTitle');
+const startBtn=document.getElementById('startBtn');
+const restartBtn=document.getElementById('restartBtn');
+const loadBtn=document.getElementById('loadBtn');
+const loadFile=document.getElementById('loadFile');
+const profileBtn=document.getElementById('profileBtn');
+const profileMenu=document.getElementById('profileMenu');
+const profileCloseBtn=document.getElementById('profileCloseBtn');
+const saveProfileBtn=document.getElementById('saveProfileBtn');
+const perkMenu=document.getElementById('perkMenu');
+const perkConfirmBtn=document.getElementById('perkConfirmBtn');
+const playerSkinSelect=document.getElementById('playerSkinSelect');
+const mercSkinSelect=document.getElementById('mercSkinSelect');
+const nicknameMenu=document.getElementById('nicknameMenu');
+const nicknameInput=document.getElementById('nicknameInput');
+const nicknameConfirmBtn=document.getElementById('nicknameConfirmBtn');
+const loadProfileBtn=document.getElementById('loadProfileBtn');
+const loadProfileFile=document.getElementById('loadProfileFile');
+const pistolSound=document.getElementById('pistolSound');
+const rifleSound=document.getElementById('rifleSound');
+const reloadSnd=document.getElementById('reloadSound');
+const emptyClick=document.getElementById('emptyGunClick');
+const bgm=document.getElementById('bgm');
+
+const bgImg=new Image(); bgImg.src='background.jpg';
+const playerImg=new Image(); playerImg.src='player.png';
+const player3Img=new Image(); player3Img.src='player3.png';
+const player4Img=new Image(); player4Img.src='player4.png';
+const player5Img=new Image(); player5Img.src='player5.png';
+const binibigImg=new Image(); binibigImg.src='binibig.png';
+const zombieImg=new Image(); zombieImg.src='zombie.png';
+const mercImg=new Image(); mercImg.src='mercenary.png';
+const merc2Img=new Image(); merc2Img.src='mercenary2.png';
+const merc3Img=new Image(); merc3Img.src='mercenary3.png';
+const merc4Img=new Image(); merc4Img.src='mercenary4.png';
+const tankZombieImg=new Image(); tankZombieImg.src='tankzombie.png';
+const muscleZombieImg=new Image(); muscleZombieImg.src='musclezombie.png';
+const maskZombieImg=new Image(); maskZombieImg.src='maskzombie.png';
+
+let enemies=[],bullets=[],mercs=[],goldPopups=[],buffPopups=[],explosions=[];
+let clipSize=5,ammo=5,damage=1;
+let reloading=false,gameOver=false,rewardMode=false,paused=false,traitUpgradeMode=false;
+let round=1;
+let weaponType='권총',autoFire=false,lastShotTime=0;
+let spawnTimerId=null;
+let playerDelay=1000,mercDelay=400;
+let mercDamage=1,mercRange=600;
+let playerRange=800,attackSpeed=0;
+let showBuffText=false,buffTextTimer=0;
+let rewardOptions=[],traitUpgradeOptions=[];
+let zombieHpMultiplier=1;
+let zombieSpeedMultiplier=1;
+let selectedTrait=null;
+let rifleUpgradeUsed=false;
+let isBossRound=false;
+let bossDefeated=false;
+let gameLoopRunning=false;
+let gameCleared=false;
+
+let doubleBulletChance=0;
+let explosiveChance=0;
+let luckyBulletChance=0;
+let mercAddCount=0;
+let mercSpeedBonus=0;
+let mercRepairChance=0;
+
+let pistolStats={attackSpeedGained:0,damageGained:0,clipGained:0};
+let mercenaryStats={damageUpgrades:0,rangeUpgrades:0,mercAdded:0};
+
+let userProfile={exp:0,level:1,selectedPlayerSkin:'player.png',selectedMercSkin:'mercenary.png',nickname:'플레이어',expChance:10};
+let selectedPerks=[];
+let highestRoundThisGame=1;
+let expAlreadyAdded=false;
+let canSelectTraitUpgrade=false;
+let totalExpGainedThisGame=0;
+
+const player={x:80,y:canvas.height/2-25,width:50,height:50};
+const fence={x:200,y:0,width:10,height:canvas.height,maxHp:5,hp:5};
+
+const SECRET_KEY='MILK_APOCALYPSE_2024_SECRET';
+
+function generateChecksum(data){
+  let hash=0;
+  const str=JSON.stringify(data)+SECRET_KEY;
+  for(let i=0;i<str.length;i++){
+    const char=str.charCodeAt(i);
+    hash=((hash<<5)-hash)+char;
+    hash=hash&hash;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+function encodeProfile(profile){
+  const jsonStr=JSON.stringify(profile);
+  const encoded=btoa(unescape(encodeURIComponent(jsonStr)));
+  const checksum=generateChecksum(profile);
+  return{data:encoded,checksum:checksum,version:1};
+}
+
+function decodeProfile(encoded){
+  try{
+    if(!encoded.data||!encoded.checksum||encoded.version!==1){
+      throw new Error('Invalid profile format');
+    }
+    const jsonStr=decodeURIComponent(escape(atob(encoded.data)));
+    const profile=JSON.parse(jsonStr);
+    const expectedChecksum=generateChecksum(profile);
+    if(encoded.checksum!==expectedChecksum){
+      throw new Error('Profile has been tampered with');
+    }
+    return profile;
+  }catch(e){
+    console.error('Profile decode failed:',e);
+    return null;
+  }
+}
+
+const levelPerks=[
+  {level:2,name:'공격 속도 +5%',description:'시작 시 공격 속도 +5%',action:()=>{attackSpeed+=0.05;playerDelay=Math.max(100,1000/(1+attackSpeed));}},
+  {level:3,name:'탄창 +1',description:'시작 시 탄창 +1',action:()=>{clipSize+=1;ammo+=1;}},
+  {level:4,name:'용병 사거리 +5',description:'시작 시 용병 사거리 +5',action:()=>{mercRange+=5;mercs.forEach(m=>m.range=mercRange);}},
+  {level:5,name:'용병 공격 속도 +5%',description:'시작 시 용병 공격 속도 +5%',action:()=>{mercSpeedBonus+=5;mercDelay=Math.max(50,Math.round(400*(100/(100+mercSpeedBonus))));}},
+  {level:6,name:'공격력 +1',description:'시작 시 공격력 +1',action:()=>{damage+=1;}},
+  {level:7,name:'용병 공격력 +1',description:'시작 시 용병 공격력 +1',action:()=>{mercDamage+=1;mercs.forEach(m=>m.damage=mercDamage);}},
+  {level:8,name:'경험치 확률 +1%',description:'좀비 처치 시 경험치 획득 확률 +1%',action:()=>{userProfile.expChance+=1;}},
+  {level:9,name:'사거리 +10',description:'시작 시 사거리 +10',action:()=>{playerRange+=10;}},
+  {level:10,name:'용병 사거리 +5',description:'시작 시 용병 사거리 +5',action:()=>{mercRange+=5;mercs.forEach(m=>m.range=mercRange);}},
+  {level:11,name:'플레이어 스킨1',description:'플레이어 스킨 해금',action:()=>{}},
+  {level:12,name:'공격 속도 +10%',description:'시작 시 공격 속도 +10%',action:()=>{attackSpeed+=0.10;playerDelay=Math.max(100,1000/(1+attackSpeed));}},
+  {level:13,name:'탄창 +2',description:'시작 시 탄창 +2',action:()=>{clipSize+=2;ammo+=2;}},
+  {level:14,name:'용병 사거리 +10',description:'시작 시 용병 사거리 +10',action:()=>{mercRange+=10;mercs.forEach(m=>m.range=mercRange);}},
+  {level:15,name:'용병 공격 속도 +10%',description:'시작 시 용병 공격 속도 +10%',action:()=>{mercSpeedBonus+=10;mercDelay=Math.max(50,Math.round(400*(100/(100+mercSpeedBonus))));}},
+  {level:16,name:'공격력 +2',description:'시작 시 공격력 +2',action:()=>{damage+=2;}},
+  {level:17,name:'용병 공격력 +2',description:'시작 시 용병 공격력 +2',action:()=>{mercDamage+=2;mercs.forEach(m=>m.damage=mercDamage);}},
+  {level:18,name:'경험치 확률 +2%',description:'좀비 처치 시 경험치 획득 확률 +2%',action:()=>{userProfile.expChance+=2;}},
+  {level:19,name:'사거리 +20',description:'시작 시 사거리 +20',action:()=>{playerRange+=20;}},
+  {level:20,name:'용병 사거리 +10',description:'시작 시 용병 사거리 +10',action:()=>{mercRange+=10;mercs.forEach(m=>m.range=mercRange);}},
+  {level:21,name:'플레이어 스킨2, 용병 스킨1',description:'스킨 해금',action:()=>{}},
+  {level:22,name:'특성 강화 선택 가능',description:'보스 클리어 시 특성 강화 선택',action:()=>{canSelectTraitUpgrade=true;}},
+  {level:23,name:'경험치 확률 +4%',description:'좀비 처치 시 경험치 획득 확률 +4%',action:()=>{userProfile.expChance+=4;}},
+  {level:24,name:'권총 전문가 우유 강화',description:'좀비 처치 시 50% 확률로 공격속도 +1%',action:()=>{}},
+  {level:25,name:'용병술 전문가 우유 강화',description:'좀비 처치 시 1% 확률로 용병 추가',action:()=>{}},
+  {level:26,name:'도박 전문가 우유 강화',description:'좀비 처치 시 7% 확률로 모든 능력치 증가',action:()=>{}},
+  {level:27,name:'경험치 확률 +4%',description:'좀비 처치 시 경험치 획득 확률 +4%',action:()=>{userProfile.expChance+=4;}},
+  {level:28,name:'용병 스킨2',description:'용병 스킨 해금',action:()=>{}},
+  {level:29,name:'플레이어 스킨3',description:'플레이어 스킨 해금',action:()=>{}},
+  {level:30,name:'특성 추가 (???)',description:'새로운 특성 해금',action:()=>{}}
+];
+
+const traits=[
+  {name:'권총 전문가 우유',description:'더 이상 소총/용병 업그레이드가 등장하지 않습니다. 기본 공격속도 150%, 탄창 +5로 시작. 좀비 처치 시 30% 확률로 공격속도 1% 추가 획득.',color:'#ff6600',id:'pistol'},
+  {name:'용병술 전문가 우유',description:'처음부터 용병 1명을 가진 채 시작합니다. 좀비를 처치할 때마다 낮은 확률(2%)로 용병이 업그레이드 되며 희박한 확률(0.5%)로 용병 1명이 추가로 영입됩니다.',color:'#00aaff',id:'mercenary'},
+  {name:'도박 전문가 우유',description:'매 라운드마다 3개가 아닌 6개의 선택지를 얻고 S등급과 SS등급의 등장 확률이 2배가 됩니다. (특성 강화 없음)',color:'#ffd700',id:'gambler'},
+  {name:'binibig',description:'용병 관련 보상이 등장하지 않으며, S등급 이상 보상만 등장합니다. 모든 스탯이 크게 상승합니다.',color:'#ff00ff',id:'binibig',needsLevel:30}
+];
+
+function getExpForLevel(lvl){return lvl*20;}
+
+function loadProfile(){
+  try{
+    const saved=localStorage.getItem('milkApocalypseProfile');
+    if(saved){
+      const encoded=JSON.parse(saved);
+      const data=decodeProfile(encoded);
+      if(data){
+        if(!data.expChance){
+          data.expChance=10;
+        }
+        userProfile=data;
+        return true;
+      }else{
+        alert('프로필이 손상되었거나 변조되었습니다. 새 프로필을 생성해주세요.');
+        localStorage.removeItem('milkApocalypseProfile');
+      }
+    }
+  }catch(e){
+    console.error('프로필 로드 실패',e);
+    localStorage.removeItem('milkApocalypseProfile');
+  }
+  return false;
+}
+
+function saveProfile(){
+  try{
+    const encoded=encodeProfile(userProfile);
+    localStorage.setItem('milkApocalypseProfile',JSON.stringify(encoded));
+  }catch(e){
+    console.error('프로필 저장 실패',e);
+  }
+}
+
+function addExp(amount){
+  userProfile.exp+=amount;
+  while(userProfile.exp>=getExpForLevel(userProfile.level)){
+    userProfile.exp-=getExpForLevel(userProfile.level);
+    userProfile.level++;
+    const perk=levelPerks.find(p=>p.level===userProfile.level);
+    if(perk){
+      alert(`레벨 업! 현재 레벨: ${userProfile.level}\n특전 획득: ${perk.name}`);
+    }else{
+      alert(`레벨 업! 현재 레벨: ${userProfile.level}`);
+    }
+  }
+  saveProfile();
+  updateProfileDisplay();
+}
+
+function updateProfileDisplay(){
+  const expNeeded=getExpForLevel(userProfile.level);
+  document.getElementById('profileLevel').textContent=userProfile.level;
+  document.getElementById('profileExp').textContent=userProfile.exp;
+  document.getElementById('profileExpNext').textContent=expNeeded;
+  document.getElementById('profileLevel2').textContent=userProfile.level;
+  document.getElementById('profileExp2').textContent=userProfile.exp;
+  document.getElementById('profileExpNext2').textContent=expNeeded;
+  document.getElementById('nicknameDisplay').textContent=userProfile.nickname;
+  document.getElementById('profileNickname').textContent=userProfile.nickname;
+  const expPercent=(userProfile.exp/expNeeded)*100;
+  document.getElementById('expBar').style.width=expPercent+'%';
+  
+  const perksList=document.getElementById('perksList');
+  perksList.innerHTML='<h2 style="color:#ffd700; margin-bottom:15px;">획득한 특전</h2>';
+  const unlockedPerks=levelPerks.filter(p=>userProfile.level>=p.level);
+  if(unlockedPerks.length>0){
+    unlockedPerks.forEach(p=>{
+      perksList.innerHTML+=`<p style="font-size:16px; margin:8px 0;"><span style="color:#4CAF50;">Lv.${p.level}</span> - ${p.name}: ${p.description}</p>`;
+    });
+  }else{
+    perksList.innerHTML+='<p style="color:#888;">아직 획득한 특전이 없습니다.</p>';
+  }
+  
+  updateSkinSelects();
+}
+
+function updateSkinSelects(){
+  const playerOptions=playerSkinSelect.options;
+  for(let i=0;i<playerOptions.length;i++){
+    const opt=playerOptions[i];
+    if(opt.value==='player.png')continue;
+    let reqLevel;
+    if(opt.value==='player3.png')reqLevel=11;
+    else if(opt.value==='player4.png')reqLevel=21;
+    else if(opt.value==='player5.png')reqLevel=29;
+    opt.disabled=userProfile.level<reqLevel;
+    if(opt.disabled){
+      const skinNum=opt.value==='player3.png'?1:opt.value==='player4.png'?2:3;
+      opt.textContent=`스킨 ${skinNum} (Lv.${reqLevel} 필요)`;
+    }
+  }
+  
+  const mercOptions=mercSkinSelect.options;
+  for(let i=0;i<mercOptions.length;i++){
+    const opt=mercOptions[i];
+    if(opt.value==='mercenary.png')continue;
+    let reqLevel;
+    if(opt.value==='mercenary2.png')reqLevel=21;
+    else if(opt.value==='mercenary3.png')reqLevel=28;
+    opt.disabled=userProfile.level<reqLevel;
+    if(opt.disabled){
+      const skinNum=opt.value==='mercenary2.png'?1:2;
+      opt.textContent=`스킨 ${skinNum} (Lv.${reqLevel} 필요)`;
+    }
+  }
+  
+  playerSkinSelect.value=userProfile.selectedPlayerSkin;
+  mercSkinSelect.value=userProfile.selectedMercSkin;
+}
+
+function showPerkSelection(){
+  const maxPerks=userProfile.level>=15?2:1;
+  const availablePerks=levelPerks.filter(p=>userProfile.level>=p.level&&p.name!=='특전 슬롯 +1');
+  
+  document.getElementById('availablePerks').textContent=maxPerks;
+  const perkCards=document.getElementById('perkCards');
+  perkCards.innerHTML='';
+  selectedPerks=[];
+  
+  availablePerks.forEach(perk=>{
+    const card=document.createElement('div');
+    card.style.cssText='width:250px;padding:20px;background:#333;border:3px solid #666;border-radius:10px;cursor:pointer;transition:all 0.2s;';
+    card.innerHTML=`<h3 style="color:#ffd700;margin-bottom:10px;">${perk.name}</h3><p style="color:white;font-size:14px;line-height:1.6;">${perk.description}</p><p style="color:#4CAF50;margin-top:10px;">Lv.${perk.level}</p>`;
+    
+    card.onclick=()=>{
+      const idx=selectedPerks.indexOf(perk);
+      if(idx>=0){
+        selectedPerks.splice(idx,1);
+        card.style.border='3px solid #666';
+        card.style.background='#333';
+      }else{
+        if(selectedPerks.length<maxPerks){
+          selectedPerks.push(perk);
+          card.style.border='3px solid #4CAF50';
+          card.style.background='#2a5a2a';
+        }
+      }
+    };
+    
+    perkCards.appendChild(card);
+  });
+  
+  menu.style.display='none';
+  perkMenu.style.display='block';
+}
+
+function isBossRoundCheck(r){return r%10===0;}
+
+function getBossType(r){
+  const bossNum=Math.floor(r/10);
+  const cycle=(bossNum-1)%3;
+  if(cycle===0)return'tank';
+  if(cycle===1)return'muscle';
+  return'mask';
+}
+
+function getBossHP(r){
+  const bossNum=Math.floor(r/10);
+  if(bossNum===1)return 150;
+  if(bossNum===2)return 500;
+  if(bossNum===3)return 1500;
+  if(bossNum===4)return 4000;
+  return 4000+(bossNum-4)*3000;
+}
+
+function showTraitSelection(){
+  if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+  traitCards.innerHTML='';
+  const availableTraits=traits.filter(t=>!t.needsLevel||userProfile.level>=t.needsLevel);
+  availableTraits.forEach(trait=>{
+    const card=document.createElement('div');
+    card.style.cssText=`width:340px;padding:30px;background:${trait.color}22;border:4px solid ${trait.color};border-radius:10px;cursor:pointer;transition:transform 0.2s;`;
+    card.onmouseover=()=>card.style.transform='scale(1.05)';
+    card.onmouseout=()=>card.style.transform='scale(1)';
+    card.onclick=()=>selectTrait(trait.id);
+    card.innerHTML=`<h2 style="color:${trait.color};margin-bottom:10px;">${trait.name}</h2><p style="color:white;font-size:16px;line-height:1.6;margin-top:15px;">${trait.description}</p>`;
+    traitCards.appendChild(card);
+  });
+  traitMenu.style.display='block';
+}
+
+function selectTrait(traitId){
+  selectedTrait=traitId;
+  traitMenu.style.display='none';
+  if(traitId==='pistol'){
+    attackSpeed=0.5;
+    playerDelay=Math.max(100,1000/(1+attackSpeed));
+    clipSize=10;
+    ammo=10;
+  }
+  if(traitId==='mercenary'){
+    const offsetY=50;
+    mercs.push({x:player.x+60,y:player.y-offsetY,width:40,height:40,cooldown:0,damage:mercDamage,range:mercRange});
+  }
+  if(traitId==='binibig'){
+    attackSpeed=1.0;
+    playerDelay=Math.max(100,1000/(1+attackSpeed));
+    clipSize=20;
+    ammo=20;
+    damage=5;
+    playerRange=1000;
+  }
+  applyLevelPerks();
+  startGameLoop();
+}
+
+function applyLevelPerks(){
+  const perks=levelPerks.filter(p=>p.level<=userProfile.level);
+  perks.forEach(perk=>perk.action());
+}
+
+function createExplosion(x,y,radius,dmg){
+  explosions.push({x,y,radius,opacity:1,timer:0});
+  const enemiesToDamage=[];
+  for(let i=0;i<enemies.length;i++){
+    const e=enemies[i];
+    const dist=Math.hypot((e.x+e.size/2)-x,(e.y+e.size/2)-y);
+    if(dist<=radius){
+      enemiesToDamage.push(e);
+    }
+  }
+  enemiesToDamage.forEach(e=>{
+    e.hp-=dmg;
+    if(e.hp<=0&&!e.isBoss){
+      onZombieKill(e);
+    }
+  });
+  enemies=enemies.filter(e=>e.hp>0);
+}
+
+function onZombieKill(zombie){
+  if(!zombie)return;
+  
+  // 경험치 획득 확률 체크
+  if(Math.random() < userProfile.expChance / 100){
+    addExp(1);
+    totalExpGainedThisGame += 1;
+    buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'EXP +1'));
+  }
+  
+  if(selectedTrait==='pistol'){
+    const pistolBonusChance=userProfile.level>=24?0.5:0.3;
+    if(Math.random()<pistolBonusChance){
+      attackSpeed+=0.01;
+      playerDelay=Math.max(100,1000/(1+attackSpeed));
+      pistolStats.attackSpeedGained+=1;
+      buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'공격속도 +1%'));
+    }
+    if(Math.random()<0.02){
+      const bonusType=Math.random();
+      if(bonusType<0.33){
+        attackSpeed+=0.05;
+        playerDelay=Math.max(100,1000/(1+attackSpeed));
+        pistolStats.attackSpeedGained+=5;
+        buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'공격속도 +5%'));
+      }else if(bonusType<0.66){
+        damage+=1;
+        pistolStats.damageGained+=1;
+        buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'공격력 +1'));
+      }else{
+        clipSize+=1;
+        ammo+=1;
+        pistolStats.clipGained+=1;
+        buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'탄창 +1'));
+      }
+    }
+  }
+  if(selectedTrait==='mercenary'){
+    const mercAddBaseChance=0.005;
+    const mercAddBonusChance=userProfile.level>=25?0.01:mercAddBaseChance;
+    if(Math.random()<mercAddBonusChance+mercAddCount/100){
+      const mercCount=mercs.length;
+      let offsetY=50,y;
+      if(mercCount===0)y=player.y-offsetY;
+      else if(mercCount===1)y=player.y+offsetY;
+      else{
+        let multiplier=Math.ceil((mercCount+1)/2);
+        y=(mercCount%2===0)?player.y-offsetY*multiplier:player.y+offsetY*multiplier;
+      }
+      mercs.push({x:player.x+60,y,width:40,height:40,cooldown:0,damage:mercDamage,range:mercRange});
+      mercenaryStats.mercAdded+=1;
+      buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'용병 추가!'));
+    }
+    if(Math.random()<0.02){
+      const upgradeType=Math.random();
+      if(upgradeType<0.5){
+        mercDamage+=1;
+        mercs.forEach(m=>m.damage=mercDamage);
+        mercenaryStats.damageUpgrades+=1;
+        buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'용병 공격력 +1'));
+      }else{
+        mercRange+=50;
+        mercs.forEach(m=>m.range=mercRange);
+        mercenaryStats.rangeUpgrades+=1;
+        buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'용병 사거리 +50'));
+      }
+    }
+  }
+  if(selectedTrait==='gambler'&&userProfile.level>=26){
+    if(Math.random()<0.07){
+      damage+=1;
+      clipSize+=1;
+      ammo+=1;
+      attackSpeed+=0.1;
+      playerDelay=Math.max(100,1000/(1+attackSpeed));
+      playerRange+=10;
+      mercDamage+=1;
+      mercRange+=10;
+      mercs.forEach(m=>{m.damage=mercDamage;m.range=mercRange;});
+      buffPopups.push(new BuffPopup(zombie.x+(zombie.size||20)/2,zombie.y||player.y,'모든 능력치 상승!'));
+    }
+  }
+}
+
+function getRoundConfig(r){
+  if(isBossRoundCheck(r)){
+    return{round:r,normal:0,fast:0,spawn:0,isBoss:true};
+  }
+  
+  // 일반 좀비: 라운드 + 4마리 (1라운드 5마리, 2라운드 6마리...)
+  const normalCount = r + 4;
+  
+  // 빠른 좀비 계산
+  let fastCount = 0;
+  if(r >= 5 && r < 11) {
+    fastCount = 1;
+  } else if(r >= 11 && r < 21) {
+    fastCount = 2;
+  } else if(r >= 21) {
+    fastCount = 3;
+  }
+  
+  return{
+    round:r,
+    normal:normalCount,
+    fast:fastCount,
+    spawn:Math.max(150,800-(r-1)*35),
+    isBoss:false
+  };
+}
+
+let normalSpawned=0,fastSpawned=0;
+function resetSpawnCounters(){normalSpawned=0;fastSpawned=0;}
+
+function applyZombieBuffs(r){
+  // 좀비 강화 효과 제거 (항상 1.0 유지)
+  zombieHpMultiplier=1;
+  zombieSpeedMultiplier=1;
+}
+
+function spawnBoss(r){
+  if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+  const bossType=getBossType(r);
+  const hp=getBossHP(r);
+  let size,y;
+  if(bossType==='tank'){ size=300; y=canvas.height/2-size/2; }
+  else if(bossType==='muscle'){ size=350; y=canvas.height/2-size/2; }
+  else { size=400; y=canvas.height/2-size/2; }
+  enemies.push({x:canvas.width+50,y,size:size,type:bossType,maxHp:hp,hp:hp,isBoss:true,baseSpeed:0.23});
+}
+
+function spawnNormal(r){
+  const y=Math.random()*(canvas.height-80);
+  // 일반 좀비 HP: 라운드 x 2 (강화 효과 없음)
+  const hp=r * 2;
+  enemies.push({x:canvas.width+50+Math.random()*40,y,size:80,type:'normal',maxHp:hp,hp:hp,isBoss:false,baseSpeed:0.3});
+  normalSpawned++;
+}
+
+function spawnFast(r){
+  const y=Math.random()*(canvas.height-60);
+  // 빠른 좀비 HP: 라운드 x 1.5 (강화 효과 없음)
+  const hp=Math.ceil(r * 1.5);
+  const fastBaseSpeed=3.0+r*0.015;
+  enemies.push({x:canvas.width+50+Math.random()*40,y,size:60,type:'fast',maxHp:hp,hp:hp,isBoss:false,baseSpeed:fastBaseSpeed});
+  fastSpawned++;
+}
+
+function spawnEnemy(){
+  if(rewardMode||isBossRound||traitUpgradeMode||paused)return;
+  const table=getRoundConfig(round);
+  if(normalSpawned>=table.normal&&fastSpawned>=table.fast){
+    if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+    return;
+  }
+  let spawned=false;
+  const r=Math.random();
+  if(!spawned&&round>=5&&fastSpawned<table.fast&&r<0.4){spawnFast(round);spawned=true;}
+  if(!spawned&&normalSpawned<table.normal){spawnNormal(round);spawned=true;}
+  if(!spawned&&fastSpawned<table.fast){spawnFast(round);spawned=true;}
+}
+
+const rewardPool=[
+  {name:'소총 업그레이드',tier:'SS',action:()=>{if(weaponType==='권총'){weaponType='소총';autoFire=true;attackSpeed=9;playerDelay=Math.max(100,1000/(1+attackSpeed));rifleUpgradeUsed=true;}},description:'권총→소총 공격속도 MAX',weight:0.3,needsCheck:(trait)=>trait!=='pistol'&&trait!=='binibig'&&!rifleUpgradeUsed},
+  {name:'공격력 +5',tier:'SS',action:()=>{damage+=5;},description:'공격력 5 증가',weight:0.5},
+  {name:'공격속도 +50%',tier:'SS',action:()=>{attackSpeed+=0.5;playerDelay=Math.max(100,1000/(1+attackSpeed));},description:'공격 속도 50% 증가',weight:0.5},
+  {name:'탄창 +10',tier:'SS',action:()=>{clipSize+=10;ammo+=10;},description:'탄창 크기 10 증가',weight:0.5},
+  {name:'사거리 +100',tier:'SS',action:()=>{playerRange+=100;},description:'사거리 100 증가',weight:0.5},
+  {name:'용병 3명 추가',tier:'SS',action:()=>{for(let i=0;i<3;i++){const mercCount=mercs.length;let offsetY=50,y;if(mercCount===0)y=player.y-offsetY;else if(mercCount===1)y=player.y+offsetY;else{let multiplier=Math.ceil((mercCount+1)/2);y=(mercCount%2===0)?player.y-offsetY*multiplier:player.y+offsetY*multiplier;}mercs.push({x:player.x+60,y,width:40,height:40,cooldown:0,damage:mercDamage,range:mercRange});}},description:'용병 3명 한번에 추가',weight:0.2,needsCheck:(trait)=>trait!=='pistol'&&trait!=='binibig'},
+  {name:'용병 추가',tier:'S',action:()=>{const mercCount=mercs.length;let offsetY=50,y;if(mercCount===0)y=player.y-offsetY;else if(mercCount===1)y=player.y+offsetY;else{let multiplier=Math.ceil((mercCount+1)/2);y=(mercCount%2===0)?player.y-offsetY*multiplier:player.y+offsetY*multiplier;}mercs.push({x:player.x+60,y,width:40,height:40,cooldown:0,damage:mercDamage,range:mercRange});},description:'용병 1명 추가',weight:2,needsCheck:(trait)=>trait!=='pistol'&&trait!=='binibig'},
+  {name:'공격력 +3',tier:'S',action:()=>{damage+=3;},description:'공격력 3 증가',weight:2},
+  {name:'공격속도 +30%',tier:'S',action:()=>{attackSpeed+=0.3;playerDelay=Math.max(100,1000/(1+attackSpeed));},description:'공격 속도 30% 증가',weight:2},
+  {name:'탄창 +6',tier:'S',action:()=>{clipSize+=6;ammo+=6;},description:'탄창 크기 6 증가',weight:2},
+  {name:'사거리 +50',tier:'S',action:()=>{playerRange+=50;},description:'사거리 50 증가',weight:2},
+  {name:'탄창 +4',tier:'A',action:()=>{clipSize+=4;ammo+=4;},description:'탄창 크기 4 증가',weight:12},
+  {name:'공격력 +2',tier:'A',action:()=>{damage+=2;},description:'공격력 2 증가',weight:12},
+  {name:'울타리 HP +2',tier:'A',action:()=>{fence.maxHp+=2;fence.hp+=2;},description:'울타리 최대 HP 2 증가',weight:12},
+  {name:'공격속도 +20%',tier:'A',action:()=>{attackSpeed+=0.2;playerDelay=Math.max(100,1000/(1+attackSpeed));},description:'공격 속도 20% 증가',weight:12},
+  {name:'사거리 +30',tier:'A',action:()=>{playerRange+=30;},description:'사거리 30 증가',weight:12},
+  {name:'탄창 +2',tier:'B',action:()=>{clipSize+=2;ammo+=2;},description:'탄창 크기 2 증가',weight:30},
+  {name:'공격력 +1',tier:'B',action:()=>{damage+=1;},description:'공격력 1 증가',weight:30},
+  {name:'울타리 HP +1',tier:'B',action:()=>{fence.maxHp+=1;fence.hp+=1;},description:'울타리 최대 HP 1 증가',weight:30},
+  {name:'용병 공격력 +1',tier:'B',action:()=>{mercDamage+=1;mercs.forEach(m=>m.damage=mercDamage);},description:'모든 용병 공격력 1 증가',weight:30,needsCheck:(trait,mercCount)=>mercCount>0},
+  {name:'용병 사거리 +50',tier:'B',action:()=>{mercRange+=50;mercs.forEach(m=>m.range=mercRange);},description:'모든 용병 사거리 50 증가',weight:30,needsCheck:(trait,mercCount)=>mercCount>0},
+  {name:'공격속도 +10%',tier:'B',action:()=>{attackSpeed+=0.1;playerDelay=Math.max(100,1000/(1+attackSpeed));},description:'공격 속도 10% 증가',weight:30},
+  {name:'사거리 +20',tier:'B',action:()=>{playerRange+=20;},description:'사거리 20 증가',weight:30},
+  {name:'울타리 회복',tier:'C',action:()=>{fence.hp=Math.min(fence.hp+3,fence.maxHp);},description:'울타리 HP 3 회복',weight:40},
+  {name:'탄창 +1',tier:'C',action:()=>{clipSize+=1;ammo+=1;},description:'탄창 크기 1 증가',weight:40},
+  {name:'공격속도 +5%',tier:'C',action:()=>{attackSpeed+=0.05;playerDelay=Math.max(100,1000/(1+attackSpeed));},description:'공격 속도 5% 증가',weight:40},
+  {name:'사거리 +10',tier:'C',action:()=>{playerRange+=10;},description:'사거리 10 증가',weight:40}
+];
+
+function getTierColor(tier){
+  switch(tier){
+    case'SS':return'#ff00ff';
+    case'S':return'#ffd700';
+    case'A':return'#ff6600';
+    case'B':return'#00aaff';
+    case'C':return'#888888';
+    default:return'#ffffff';
+  }
+}
+
+function generateRewards(){
+  const rewardCount=selectedTrait==='gambler'?6:3;
+  let rewards=[];
+  const availableRewards=rewardPool.filter(r=>{
+    if(r.needsCheck)return r.needsCheck(selectedTrait,mercs.length);
+    return true;
+  });
+  
+  let filteredRewards=availableRewards;
+  if(selectedTrait==='binibig'){
+    filteredRewards=availableRewards.filter(r=>r.tier==='SS'||r.tier==='S');
+  }
+  
+  if(filteredRewards.length<=rewardCount){
+    return filteredRewards.slice(0,rewardCount).map(r=>({...r}));
+  }
+  const totalWeight=filteredRewards.reduce((sum,r)=>{
+    let weight=r.weight;
+    if(selectedTrait==='gambler'&&(r.tier==='S'||r.tier==='SS')){
+      weight*=2;
+    }
+    return sum+weight;
+  },0);
+  const usedNames=new Set();
+  let attempts=0;
+  while(rewards.length<rewardCount&&attempts<1000){
+    attempts++;
+    const rand=Math.random()*totalWeight;
+    let cumulative=0;
+    for(let reward of filteredRewards){
+      let weight=reward.weight;
+      if(selectedTrait==='gambler'&&(reward.tier==='S'||reward.tier==='SS')){
+        weight*=2;
+      }
+      cumulative+=weight;
+      if(rand<=cumulative){
+        if(!usedNames.has(reward.name)){
+          rewards.push({...reward});
+          usedNames.add(reward.name);
+        }
+        break;
+      }
+    }
+  }
+  if(rewards.length<rewardCount){
+    for(let r of filteredRewards){
+      if(!usedNames.has(r.name)){
+        rewards.push({...r});
+        usedNames.add(r.name);
+        if(rewards.length>=rewardCount)break;
+      }
+    }
+  }
+  return rewards.slice(0,rewardCount);
+}
+
+function generateTraitUpgrades(){
+  if(selectedTrait==='pistol'){
+    return[
+      {name:'두 번째 탄환',description:`${10+doubleBulletChance*5}% 확률로 1발이 2명 이상의 좀비에게 적중`,action:()=>{doubleBulletChance++;}},
+      {name:'폭발탄',description:`${10+explosiveChance*5}% 확률로 폭발탄 발사, 범위 ${100+explosiveChance*5}`,action:()=>{explosiveChance++;}},
+      {name:'행운의 총알',description:`${10+luckyBulletChance*5}% 확률로 총알 페이백, 재장전 시 ${10+luckyBulletChance*5}% 확률로 탄창+1`,action:()=>{luckyBulletChance++;}}
+    ];
+  }
+  if(selectedTrait==='mercenary'){
+    return[
+      {name:'집결',description:'용병 +1, 좀비 처치 시 용병 추가 확률 +1%',action:()=>{const mercCount=mercs.length;let offsetY=50,y;if(mercCount===0)y=player.y-offsetY;else if(mercCount===1)y=player.y+offsetY;else{let multiplier=Math.ceil((mercCount+1)/2);y=(mercCount%2===0)?player.y-offsetY*multiplier:player.y+offsetY*multiplier;}mercs.push({x:player.x+60,y,width:40,height:40,cooldown:0,damage:mercDamage,range:mercRange});mercAddCount++;}},
+      {name:'용병술 단련',description:'용병 공격속도 +20%',action:()=>{mercSpeedBonus+=20;mercDelay=Math.max(50,Math.round(400*(100/(100+mercSpeedBonus))));}},
+      {name:'수리공',description:'라운드당 50% 확률로 울타리 최대 HP +1',action:()=>{mercRepairChance+=50;}}
+    ];
+  }
+  return[];
+}
+
+function drawTraitUpgradeScreen(){
+  const screenX=canvas.width/2-550;
+  const screenY=canvas.height/2-270;
+  const screenWidth=1100;
+  const screenHeight=540;
+  ctx.fillStyle='rgba(0,0,0,0.95)';
+  ctx.fillRect(screenX,screenY,screenWidth,screenHeight);
+  ctx.strokeStyle='#ffd700';
+  ctx.lineWidth=5;
+  ctx.strokeRect(screenX,screenY,screenWidth,screenHeight);
+  ctx.fillStyle='#ffd700';
+  ctx.font='bold 36px Arial';
+  ctx.textAlign='center';
+  ctx.fillText(`보스 라운드 클리어! 특성 강화 선택`,canvas.width/2,screenY+60);
+  const cardWidth=300;
+  const cardHeight=340;
+  const gap=50;
+  const totalWidth=cardWidth*3+gap*2;
+  const startX=canvas.width/2-totalWidth/2;
+  const startY=screenY+120;
+  traitUpgradeOptions.forEach((upgrade,i)=>{
+    const x=startX+i*(cardWidth+gap);
+    const y=startY;
+    const color=selectedTrait==='pistol'?'#ff6600':'#00aaff';
+    ctx.fillStyle=color+'33';
+    ctx.fillRect(x,y,cardWidth,cardHeight);
+    ctx.strokeStyle=color;
+    ctx.lineWidth=4;
+    ctx.strokeRect(x,y,cardWidth,cardHeight);
+    ctx.fillStyle='white';
+    ctx.font='bold 24px Arial';
+    ctx.textAlign='center';
+    ctx.fillText(upgrade.name,x+cardWidth/2,y+40);
+    ctx.font='18px Arial';
+    const words=upgrade.description.split(' ');
+    let line='';
+    let yOffset=90;
+    words.forEach(word=>{
+      const testLine=line+word+' ';
+      const metrics=ctx.measureText(testLine);
+      if(metrics.width>cardWidth-40){
+        ctx.fillText(line,x+cardWidth/2,y+yOffset);
+        line=word+' ';
+        yOffset+=28;
+      }else{
+        line=testLine;
+      }
+    });
+    ctx.fillText(line,x+cardWidth/2,y+yOffset);
+    const btnY=y+cardHeight-60;
+    const btnHeight=50;
+    ctx.fillStyle='#ffd700';
+    ctx.fillRect(x+40,btnY,cardWidth-80,btnHeight);
+    ctx.strokeStyle='#ffff00';
+    ctx.lineWidth=3;
+    ctx.strokeRect(x+40,btnY,cardWidth-80,btnHeight);
+    ctx.fillStyle='#000';
+    ctx.font='bold 20px Arial';
+    ctx.fillText('선택',x+cardWidth/2,btnY+32-14);
+    upgrade.clickArea={x:x+40,y:btnY,width:cardWidth-80,height:btnHeight};
+  });
+}
+
+function drawRewardScreen(){
+  const rewardCount=rewardOptions.length;
+  const cardWidth=rewardCount===6?180:300;
+  const cardHeight=rewardCount===6?320:380;
+  const gap=rewardCount===6?10:50;
+  const totalWidth=cardWidth*rewardCount+gap*(rewardCount-1);
+  const screenWidth=totalWidth+100;
+  const screenHeight=rewardCount===6?480:540;
+  const screenX=canvas.width/2-screenWidth/2;
+  const screenY=canvas.height/2-screenHeight/2;
+  ctx.fillStyle='rgba(0,0,0,0.95)';
+  ctx.fillRect(screenX,screenY,screenWidth,screenHeight);
+  ctx.strokeStyle='white';
+  ctx.lineWidth=3;
+  ctx.strokeRect(screenX,screenY,screenWidth,screenHeight);
+  ctx.fillStyle='white';
+  ctx.font='32px Arial';
+  ctx.textAlign='center';
+  ctx.fillText(`라운드 ${round} 완료! 보상을 선택하세요`,canvas.width/2,screenY+50);
+  const startX=canvas.width/2-totalWidth/2;
+  const startY=screenY+100;
+  rewardOptions.forEach((reward,i)=>{
+    const x=startX+i*(cardWidth+gap);
+    const y=startY;
+    const tierColor=getTierColor(reward.tier);
+    ctx.fillStyle=tierColor+'22';
+    ctx.fillRect(x,y,cardWidth,cardHeight);
+    ctx.strokeStyle=tierColor;
+    ctx.lineWidth=4;
+    ctx.strokeRect(x,y,cardWidth,cardHeight);
+    ctx.fillStyle=tierColor;
+    ctx.font=rewardCount===6?'bold 20px Arial':'bold 32px Arial';
+    ctx.textAlign='center';
+    ctx.fillText(`[${reward.tier}]`,x+cardWidth/2,y+(rewardCount===6?30:45));
+    ctx.fillStyle='white';
+    ctx.font=rewardCount===6?'bold 16px Arial':'bold 26px Arial';
+    ctx.fillText(reward.name,x+cardWidth/2,y+(rewardCount===6?60:100));
+    ctx.font=rewardCount===6?'14px Arial':'20px Arial';
+    const words=reward.description.split(' ');
+    let line='';
+    let yOffset=rewardCount===6?100:160;
+    const lineHeight=rewardCount===6?20:30;
+    words.forEach(word=>{
+      const testLine=line+word+' ';
+      const metrics=ctx.measureText(testLine);
+      if(metrics.width>cardWidth-(rewardCount===6?20:30)){
+        ctx.fillText(line,x+cardWidth/2,y+yOffset);
+        line=word+' ';
+        yOffset+=lineHeight;
+      }else{
+        line=testLine;
+      }
+    });
+    ctx.fillText(line,x+cardWidth/2,y+yOffset);
+    const btnY=y+cardHeight-(rewardCount===6?40:50);
+    const btnHeight=rewardCount===6?35:55;
+    const btnPadding=rewardCount===6?30:50;
+    ctx.fillStyle='#00aa00';
+    ctx.fillRect(x+btnPadding,btnY,cardWidth-btnPadding*2,btnHeight);
+    ctx.strokeStyle='#00ff00';
+    ctx.lineWidth=3;
+    ctx.strokeRect(x+btnPadding,btnY,cardWidth-btnPadding*2,btnHeight);
+    ctx.fillStyle='white';
+    ctx.font=rewardCount===6?'bold 16px Arial':'bold 22px Arial';
+    ctx.fillText('선택',x+cardWidth/2,btnY+(rewardCount===6?12:20));
+    reward.clickArea={x:x+btnPadding,y:btnY,width:cardWidth-btnPadding*2,height:btnHeight};
+  });
+}
+
+let volumeBar={x:canvas.width-200,y:20,width:150,height:10,handleX:150,dragging:false};
+
+function drawHUD(){
+  ctx.fillStyle='white';ctx.font='18px Arial';ctx.textAlign='left';ctx.textBaseline='top';
+  if(isBossRound){
+    ctx.fillStyle='red';ctx.font='24px Arial';
+    ctx.fillText(`보스 라운드 ${round}`,20,20);
+    ctx.fillStyle='white';ctx.font='18px Arial';
+  }else{
+    ctx.fillText(`라운드 ${round}`,20,20);
+  }
+  ctx.fillText(`특성: ${traits.find(t=>t.id===selectedTrait)?.name||'없음'}`,20,50);
+  ctx.fillText(`경험치 획득 확률: ${userProfile.expChance}%`,20,80);
+  ctx.fillText(`탄약 ${ammo}/${clipSize}`,20,110);
+  ctx.fillText(`${weaponType} 공격력 ${damage}`,20,140);
+  ctx.fillText(`공격속도 ${Math.round((1+attackSpeed)*100)}%`,20,170);
+  ctx.fillText(`사거리 ${playerRange}`,20,200);
+  ctx.fillText(`울타리 HP ${fence.hp}/${fence.maxHp}`,20,230);
+  ctx.fillText(`용병 ${mercs.length}`,20,260);
+  ctx.fillText(`용병 공격력 ${mercDamage}`,20,290);
+  ctx.fillText(`용병 사거리 ${mercRange}`,20,320);
+  if(selectedTrait==='pistol'){
+    ctx.fillStyle='#ff6600';
+    ctx.font='16px Arial';
+    ctx.textAlign='left';
+    ctx.fillText('=== 처치 보너스 획득 ===',20,canvas.height-110);
+    ctx.fillStyle='white';
+    ctx.font='14px Arial';
+    ctx.fillText(`공격속도: +${pistolStats.attackSpeedGained}%`,20,canvas.height-85);
+    ctx.fillText(`공격력: +${pistolStats.damageGained}`,20,canvas.height-65);
+    ctx.fillText(`탄창: +${pistolStats.clipGained}`,20,canvas.height-45);
+  }
+  if(selectedTrait==='mercenary'){
+    ctx.fillStyle='#00aaff';
+    ctx.font='16px Arial';
+    ctx.textAlign='left';
+    ctx.fillText('=== 처치 보너스 획득 ===',20,canvas.height-110);
+    ctx.fillStyle='white';
+    ctx.font='14px Arial';
+    ctx.fillText(`용병 공격력 업그레이드: ${mercenaryStats.damageUpgrades}회`,20,canvas.height-85);
+    ctx.fillText(`용병 사거리 업그레이드: ${mercenaryStats.rangeUpgrades}회`,20,canvas.height-65);
+    ctx.fillText(`용병 추가: ${mercenaryStats.mercAdded}명`,20,canvas.height-45);
+  }
+  
+  const expNeeded=getExpForLevel(userProfile.level);
+  const expPercent=(userProfile.exp/expNeeded);
+  ctx.fillStyle='white';ctx.font='16px Arial';ctx.textAlign='right';
+  ctx.fillText(`${userProfile.nickname} Lv.${userProfile.level}`,canvas.width-20,canvas.height-80);
+  ctx.fillText(`EXP: ${userProfile.exp}/${expNeeded}`,canvas.width-20,canvas.height-60);
+  const barWidth=200;
+  const barHeight=20;
+  const barX=canvas.width-barWidth-20;
+  const barY=canvas.height-35;
+  ctx.fillStyle='#333';
+  ctx.fillRect(barX,barY,barWidth,barHeight);
+  ctx.fillStyle='#4CAF50';
+  ctx.fillRect(barX,barY,barWidth*expPercent,barHeight);
+  ctx.strokeStyle='#fff';
+  ctx.lineWidth=2;
+  ctx.strokeRect(barX,barY,barWidth,barHeight);
+  
+  ctx.fillStyle='white';ctx.font='18px Arial';ctx.textAlign='right';
+  ctx.fillText(`볼륨 조절 :`,canvas.width-320,20);
+  ctx.fillStyle='#333';ctx.fillRect(volumeBar.x,volumeBar.y,volumeBar.width,volumeBar.height);
+  ctx.fillStyle='#fff';ctx.fillRect(volumeBar.x+volumeBar.handleX-5,volumeBar.y-5,10,20);
+  if(isBossRound){
+    ctx.fillStyle='red';ctx.font='28px Arial';ctx.textAlign='center';ctx.fillText('보스를 처치하세요!',canvas.width/2,60);
+  }
+  if(paused){ctx.fillStyle='orange';ctx.font='30px Arial';ctx.textAlign='center';ctx.fillText('일시정지',canvas.width/2,80);}
+  ctx.fillStyle='white';ctx.font='14px Arial';ctx.textAlign='left';ctx.fillText('P: 일시정지',20,canvas.height-20);
+}
+
+canvas.addEventListener('mousedown',e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(traitUpgradeMode){
+    traitUpgradeOptions.forEach(upgrade=>{
+      if(upgrade.clickArea&&mx>=upgrade.clickArea.x&&mx<=upgrade.clickArea.x+upgrade.clickArea.width&&my>=upgrade.clickArea.y&&my<=upgrade.clickArea.y+upgrade.clickArea.height){
+        try{ upgrade.action(); }catch(ex){ console.error('trait action failed',ex); }
+        traitUpgradeMode=false;
+        round++;
+        if(mercRepairChance>0&&Math.random()<mercRepairChance/100){
+          fence.maxHp+=1;
+          fence.hp=Math.min(fence.hp+1,fence.maxHp);
+        }
+        fence.hp=Math.min(fence.hp+1,fence.maxHp);
+        resetSpawnCounters();
+        mercs.forEach(m=>m.cooldown=0);
+        applyZombieBuffs(round);
+        isBossRound=isBossRoundCheck(round);
+        bossDefeated=false;
+        if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+        if(isBossRound){
+          spawnBoss(round);
+        }else{
+          spawnTimerId=setInterval(()=>spawnEnemy(),getRoundConfig(round).spawn);
+        }
+      }
+    });
+    return;
+  }
+  if(rewardMode){
+    rewardOptions.forEach(reward=>{
+      if(reward.clickArea&&mx>=reward.clickArea.x&&mx<=reward.clickArea.x+reward.clickArea.width&&my>=reward.clickArea.y&&my<=reward.clickArea.y+reward.clickArea.height){
+        try{ reward.action(); }catch(ex){ console.error('reward.action() failed',ex); }
+        rewardMode=false;
+        round++;
+        fence.hp=Math.min(fence.hp+1,fence.maxHp);
+        resetSpawnCounters();
+        mercs.forEach(m=>m.cooldown=0);
+        applyZombieBuffs(round);
+        isBossRound=isBossRoundCheck(round);
+        bossDefeated=false;
+        if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+        if(isBossRound){
+          spawnBoss(round);
+        }else{
+          spawnTimerId=setInterval(()=>spawnEnemy(),getRoundConfig(round).spawn);
+        }
+      }
+    });
+    return;
+  }
+  if(mx>=volumeBar.x&&mx<=volumeBar.x+volumeBar.width&&my>=volumeBar.y-10&&my<=volumeBar.y+20){
+    volumeBar.dragging=true;
+    let newX=Math.min(volumeBar.width,Math.max(0,mx-volumeBar.x));
+    volumeBar.handleX=newX;
+    setAudioVolume(newX/volumeBar.width);
+  }
+});
+
+canvas.addEventListener('mouseup',()=>{volumeBar.dragging=false;});
+canvas.addEventListener('mouseleave',()=>{volumeBar.dragging=false;});
+
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(volumeBar.dragging){
+    let newX=Math.min(volumeBar.width,Math.max(0,mx-volumeBar.x));
+    volumeBar.handleX=newX;
+    setAudioVolume(newX/volumeBar.width);
+  }
+});
+
+function setAudioVolume(v){
+  try{ bgm.volume=v; }catch(e){}
+  try{ pistolSound.volume=v; rifleSound.volume=v; reloadSnd.volume=v; emptyClick.volume=v; }catch(e){}
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='p'){
+    paused=!paused;
+    if(paused) try{ bgm.pause(); }catch(e){}
+    else if(!gameOver) try{ bgm.play(); }catch(e){}
+  }
+});
+
+function playerAutoAttack(){
+  if(rewardMode||paused||gameOver||traitUpgradeMode)return;
+  if(ammo<=0&&!reloading){
+    reloading=true;
+    const reloadTime=800;
+    try{ reloadSnd.currentTime=0; reloadSnd.play(); }catch(e){}
+    setTimeout(()=>{ 
+      ammo=clipSize;
+      if(luckyBulletChance>0&&Math.random()<(10+luckyBulletChance*5)/100){
+        clipSize+=1;
+        ammo=clipSize;
+        buffPopups.push(new BuffPopup(player.x+player.width/2,player.y,'탄창 +1!'));
+      }
+      reloading=false; 
+    },reloadTime);
+    return;
+  }
+  if(reloading)return;
+  let closestEnemy=null;let minDist=Infinity;
+  enemies.forEach(e=>{
+    const eSize=e.size;
+    const exCenter=e.x+eSize/2;const eyCenter=e.y+eSize/2;
+    const dist=Math.hypot(exCenter-(player.x+player.width/2),eyCenter-(player.y+player.height/2));
+    if(dist<=playerRange&&dist<minDist){minDist=dist;closestEnemy=e;}
+  });
+  if(closestEnemy){
+    if(Date.now()-lastShotTime>=playerDelay){
+      lastShotTime=Date.now();
+      ammo--;
+      if(luckyBulletChance>0&&Math.random()<(10+luckyBulletChance*5)/100){
+        ammo++;
+        buffPopups.push(new BuffPopup(player.x+player.width/2,player.y,'총알 페이백!'));
+      }
+      
+      const isExplosiveBullet=explosiveChance>0&&Math.random()<(10+explosiveChance*5)/100;
+      if(isExplosiveBullet){
+        const explosionRadius=100+explosiveChance*5;
+        createExplosion(closestEnemy.x+closestEnemy.size/2,closestEnemy.y+closestEnemy.size/2,explosionRadius,damage);
+        buffPopups.push(new BuffPopup(closestEnemy.x+closestEnemy.size/2,closestEnemy.y,'폭발!'));
+      }else{
+        closestEnemy.hp-=damage;
+        if(doubleBulletChance>0&&Math.random()<(10+doubleBulletChance*5)/100){
+          let secondTarget=null;let minDist2=Infinity;
+          enemies.forEach(e=>{
+            if(e===closestEnemy) return;
+            const dist=Math.hypot((e.x+e.size/2)-(player.x+player.width/2),(e.y+e.size/2)-(player.y+player.height/2));
+            if(dist<=playerRange&&dist<minDist2){minDist2=dist;secondTarget=e;}
+          });
+          if(secondTarget) secondTarget.hp-=damage;
+        }
+      }
+      
+      try{ const snd=weaponType==='권총'?pistolSound.cloneNode():rifleSound.cloneNode(); snd.volume=bgm.volume; snd.play(); }catch(e){}
+      
+      enemies=enemies.filter(e=>{
+        if(e.hp<=0){
+          if(e.isBoss){ bossDefeated=true; return false; }
+          else { onZombieKill(e); return false; }
+        }
+        return true;
+      });
+    }
+  }
+}
+
+class GoldPopup{constructor(x,y,amount){this.x=x;this.y=y;this.amount=amount;this.opacity=1;this.timer=0;}update(){this.y-=0.5;this.timer++;this.opacity=1-this.timer/60;}draw(ctx){ctx.fillStyle=`rgba(255,255,0,${this.opacity})`;ctx.font='18px Arial';ctx.fillText(`+${this.amount}`,this.x,this.y);}}
+class BuffPopup{constructor(x,y,text){this.x=x;this.y=y;this.text=text;this.opacity=1;this.timer=0;}update(){this.y-=1;this.timer++;this.opacity=1-this.timer/90;}draw(ctx){ctx.fillStyle=`rgba(255,255,255,${this.opacity})`;ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.fillText(this.text,this.x,this.y);}}
+
+function updateRound(){
+  if(round>highestRoundThisGame)highestRoundThisGame=round;
+  if(isBossRound){
+    if(bossDefeated&&!rewardMode&&!traitUpgradeMode){
+      if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+      
+      // 30 라운드 보스 클리어 시 게임 클리어
+      if(round >= 30) {
+        gameCleared = true;
+        gameOver = true;
+        
+        // 클리어 보너스 경험치
+        let roundBonus = 10;
+        addExp(roundBonus);
+        totalExpGainedThisGame += roundBonus;
+        
+        return;
+      }
+      
+      // 라운드 클리어 보너스 경험치 지급
+      let roundBonus = 0;
+      if(round <= 10) {
+        roundBonus = 1;
+      } else if(round <= 20) {
+        roundBonus = 5;
+      } else {
+        roundBonus = 10;
+      }
+      
+      if(roundBonus > 0) {
+        addExp(roundBonus);
+        totalExpGainedThisGame += roundBonus;
+      }
+      
+      if(selectedTrait==='gambler'||!canSelectTraitUpgrade||userProfile.level<22){
+        rewardMode=true;
+        enemies=[];bullets=[];goldPopups=[];buffPopups=[];explosions=[];
+        rewardOptions=generateRewards();
+      }else{
+        traitUpgradeMode=true;
+        enemies=[];bullets=[];goldPopups=[];buffPopups=[];explosions=[];
+        traitUpgradeOptions=generateTraitUpgrades();
+      }
+    }
+  }else{
+    const table=getRoundConfig(round);
+    if(normalSpawned>=table.normal&&fastSpawned>=table.fast&&enemies.length===0&&!rewardMode){
+      
+      // 라운드 클리어 보너스 경험치 지급
+      let roundBonus = 0;
+      if(round <= 10) {
+        roundBonus = 1;
+      } else if(round <= 20) {
+        roundBonus = 5;
+      } else {
+        roundBonus = 10;
+      }
+      
+      if(roundBonus > 0) {
+        addExp(roundBonus);
+        totalExpGainedThisGame += roundBonus;
+      }
+      
+      rewardMode=true;
+      if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+      enemies=[];bullets=[];goldPopups=[];buffPopups=[];explosions=[];
+      rewardOptions=generateRewards();
+    }
+  }
+}
+
+function update(){
+  if(!gameLoopRunning)return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(bgImg,0,0,canvas.width,canvas.height);
+  if(gameOver){
+    if(!expAlreadyAdded){
+      expAlreadyAdded=true;
+      document.getElementById('finalRound').textContent=highestRoundThisGame;
+      document.getElementById('gainedExp').textContent=totalExpGainedThisGame;
+      
+      // 게임 클리어 여부에 따라 타이틀 변경
+      if(gameCleared) {
+        gameOverTitle.textContent='게임 클리어!';
+        gameOverTitle.style.color='#ffd700';
+      } else {
+        gameOverTitle.textContent='게임 오버';
+        gameOverTitle.style.color='white';
+      }
+    }
+    gameOverMenu.style.display='block';
+    drawHUD();
+    requestAnimationFrame(update);
+    return;
+  }
+  if(showBuffText&&Date.now()-buffTextTimer>1500){showBuffText=false;}
+  if(traitUpgradeMode){ drawTraitUpgradeScreen(); drawHUD(); requestAnimationFrame(update); return; }
+  if(rewardMode){ drawRewardScreen(); drawHUD(); requestAnimationFrame(update); return; }
+  if(paused){ drawHUD(); requestAnimationFrame(update); return; }
+
+  playerAutoAttack();
+  let currentPlayerImg=playerImg;
+  if(selectedTrait==='binibig'){
+    currentPlayerImg=binibigImg;
+  }else{
+    currentPlayerImg=userProfile.selectedPlayerSkin==='player3.png'?player3Img:
+                    userProfile.selectedPlayerSkin==='player4.png'?player4Img:
+                    userProfile.selectedPlayerSkin==='player5.png'?player5Img:playerImg;
+  }
+  const isDefaultSkin=(selectedTrait!=='binibig'&&userProfile.selectedPlayerSkin==='player.png');
+  const playerDrawWidth=isDefaultSkin?player.width:80;
+  const playerDrawHeight=isDefaultSkin?player.height:80;
+  const playerDrawX=isDefaultSkin?player.x:player.x-15;
+  const playerDrawY=isDefaultSkin?player.y:player.y-15;
+  ctx.drawImage(currentPlayerImg,playerDrawX,playerDrawY,playerDrawWidth,playerDrawHeight);
+  if(reloading){ ctx.fillStyle='red';ctx.font='24px Arial';ctx.textAlign='center';ctx.fillText('재장전 중',playerDrawX+playerDrawWidth/2,playerDrawY-10); }
+
+  const currentMercImg=userProfile.selectedMercSkin==='mercenary2.png'?merc2Img:
+                       userProfile.selectedMercSkin==='mercenary3.png'?merc3Img:
+                       userProfile.selectedMercSkin==='mercenary4.png'?merc4Img:mercImg;
+  const isDefaultMercSkin=userProfile.selectedMercSkin==='mercenary.png';
+  const mercDrawWidth=isDefaultMercSkin?40:70;
+  const mercDrawHeight=isDefaultMercSkin?40:70;
+  mercs.forEach(m=>{
+    if(m.cooldown>0) m.cooldown--;
+    else{
+      let target=null;let minDist=Infinity;
+      const mxCenter=m.x+m.width/2;const myCenter=m.y+m.height/2;
+      enemies.forEach(e=>{
+        const eSize=e.size;
+        const exCenter=e.x+eSize/2;const eyCenter=e.y+eSize/2;
+        const dist=Math.hypot(exCenter-mxCenter,eyCenter-myCenter);
+        if(dist<=m.range&&dist<minDist){target=e;minDist=dist;}
+      });
+      if(target){
+        target.hp-=m.damage;
+        try{ const snd=pistolSound.cloneNode(); snd.volume=bgm.volume; snd.play(); }catch(e){}
+        m.cooldown=mercDelay;
+        enemies=enemies.filter(e=>{
+          if(e.hp<=0){
+            if(e.isBoss){ bossDefeated=true; return false; }
+            else { onZombieKill(e); return false; }
+          }
+          return true;
+        });
+      }
+    }
+    const mercDrawX=isDefaultMercSkin?m.x:m.x-15;
+    const mercDrawY=isDefaultMercSkin?m.y:m.y-15;
+    ctx.drawImage(currentMercImg,mercDrawX,mercDrawY,mercDrawWidth,mercDrawHeight);
+  });
+
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    const speed=e.baseSpeed;
+    e.x-=speed;
+    const drawSize=e.size;
+    if(e.type==='tank'){ctx.drawImage(tankZombieImg,e.x,e.y,drawSize,drawSize);}
+    else if(e.type==='muscle'){ctx.drawImage(muscleZombieImg,e.x,e.y,drawSize,drawSize);}
+    else if(e.type==='mask'){ctx.drawImage(maskZombieImg,e.x,e.y,drawSize,drawSize);}
+    else{ctx.drawImage(zombieImg,e.x,e.y,drawSize,drawSize);}
+    const gaugeWidth=drawSize,gaugeHeight=e.isBoss?12:6,gaugeX=e.x,gaugeY=e.y-15;
+    ctx.fillStyle='red';ctx.fillRect(gaugeX,gaugeY,gaugeWidth,gaugeHeight);
+    ctx.fillStyle='lime';ctx.fillRect(gaugeX,gaugeY,gaugeWidth*(e.hp/e.maxHp),gaugeHeight);
+    ctx.fillStyle='white';ctx.font=e.isBoss?'16px Arial':'12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(Math.ceil(e.hp),gaugeX+gaugeWidth/2,gaugeY+gaugeHeight/2);
+    if(e.isBoss){
+      ctx.fillStyle='red';ctx.font='20px Arial';ctx.textAlign='center';
+      ctx.fillText('BOSS',gaugeX+gaugeWidth/2,gaugeY-20);
+    }
+    if(e.x+drawSize>=fence.x&&e.x<=fence.x+fence.width&&e.y+drawSize>=fence.y&&e.y<=fence.y+fence.height){
+      fence.hp--;
+      enemies.splice(i,1);
+      if(fence.hp<=0){
+        gameOver=true;
+        if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+      }
+    }
+  }
+
+  explosions.forEach(ex=>{
+    ex.timer++;
+    ex.opacity=1-ex.timer/30;
+    ctx.fillStyle=`rgba(255,100,0,${ex.opacity*0.6})`;
+    ctx.beginPath();
+    ctx.arc(ex.x,ex.y,ex.radius,0,Math.PI*2);
+    ctx.fill();
+  });
+  explosions=explosions.filter(ex=>ex.opacity>0);
+
+  goldPopups.forEach(g=>{g.update();g.draw(ctx);});
+  goldPopups=goldPopups.filter(g=>g.opacity>0);
+  buffPopups.forEach(b=>{b.update();b.draw(ctx);});
+  buffPopups=buffPopups.filter(b=>b.opacity>0);
+
+  drawHUD();
+  updateRound();
+  requestAnimationFrame(update);
+}
+
+function startGameLoop(){
+  applyZombieBuffs(round);
+  isBossRound=isBossRoundCheck(round);
+  bossDefeated=false;
+  if(spawnTimerId){ clearInterval(spawnTimerId); spawnTimerId=null; }
+  if(isBossRound){
+    spawnBoss(round);
+  }else{
+    spawnTimerId=setInterval(()=>spawnEnemy(),getRoundConfig(round).spawn);
+  }
+  try{ bgm.currentTime=0; setAudioVolume(1); bgm.play(); }catch(e){}
+  volumeBar.handleX=volumeBar.width;
+  canvas.style.display='block';
+  gameLoopRunning=true;
+  update();
+}
+
+function startGame(){
+  menu.style.display='none';
+  gameOverMenu.style.display='none';
+  gameLoopRunning=false;
+  if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
+  clipSize=5;ammo=5;damage=1;weaponType='권총';autoFire=false;mercs=[];mercDamage=1;mercRange=600;
+  playerRange=800;attackSpeed=0;playerDelay=1000;mercDelay=400;round=1;gameOver=false;rewardMode=false;traitUpgradeMode=false;
+  enemies=[];bullets=[];goldPopups=[];buffPopups=[];explosions=[];
+  fence.maxHp=5;fence.hp=5;resetSpawnCounters();
+  zombieHpMultiplier=1;zombieSpeedMultiplier=1;showBuffText=false;buffTextTimer=0;rewardOptions=[];reloading=false;
+  selectedTrait=null;rifleUpgradeUsed=false;isBossRound=false;bossDefeated=false;paused=false;lastShotTime=0;
+  doubleBulletChance=0;explosiveChance=0;luckyBulletChance=0;
+  mercAddCount=0;mercSpeedBonus=0;mercRepairChance=0;
+  pistolStats={attackSpeedGained:0,damageGained:0,clipGained:0};
+  mercenaryStats={damageUpgrades:0,rangeUpgrades:0,mercAdded:0};
+  highestRoundThisGame=1;
+  expAlreadyAdded=false;
+  totalExpGainedThisGame=0;
+  canSelectTraitUpgrade=userProfile.level>=22;
+  gameCleared=false;
+  traitMenu.style.display='none';
+  perkMenu.style.display='none';
+  
+  showTraitSelection();
+}
+
+function showMenu(){
+  gameOverMenu.style.display='none';
+  profileMenu.style.display='none';
+  perkMenu.style.display='none';
+  traitMenu.style.display='none';
+  nicknameMenu.style.display='none';
+  canvas.style.display='none';
+  menu.style.display='block';
+  updateProfileDisplay();
+}
+
+function showNicknameMenu(){
+  menu.style.display='none';
+  profileMenu.style.display='none';
+  canvas.style.display='none';
+  nicknameMenu.style.display='block';
+  nicknameInput.value='';
+  nicknameInput.focus();
+}
+
+function setNickname(){
+  const newNickname=nicknameInput.value.trim();
+  if(newNickname.length===0){
+    alert('닉네임을 입력해주세요.');
+    return;
+  }
+  if(newNickname.length>12){
+    alert('닉네임은 최대 12자까지 입력할 수 있습니다.');
+    return;
+  }
+  userProfile={exp:0,level:1,selectedPlayerSkin:'player.png',selectedMercSkin:'mercenary.png',nickname:newNickname,expChance:10};
+  saveProfile();
+  nicknameMenu.style.display='none';
+  menu.style.display='block';
+  updateProfileDisplay();
+}
+
+function loadProfileFromFile(data){
+  try{
+    const profile=decodeProfile(data);
+    if(!profile){
+      alert('프로필 파일이 손상되었거나 변조되었습니다.');
+      return;
+    }
+    if(!profile.expChance){
+      profile.expChance=10;
+    }
+    userProfile=profile;
+    saveProfile();
+    nicknameMenu.style.display='none';
+    canvas.style.display='none';
+    menu.style.display='block';
+    updateProfileDisplay();
+    alert(`${userProfile.nickname}님의 프로필을 불러왔습니다!\n레벨: ${userProfile.level} | 경험치: ${userProfile.exp}`);
+  }catch(err){
+    alert('프로필 파일을 불러오는데 실패했습니다.');
+    console.error(err);
+  }
+}
+
+function saveProfileToFile(){
+  const encoded=encodeProfile(userProfile);
+  const dataStr=JSON.stringify(encoded,null,2);
+  const blob=new Blob([dataStr],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`milk_apocalypse_profile_${userProfile.nickname}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  alert('프로필이 저장되었습니다!');
+}
+
+startBtn.addEventListener('click',startGame);
+restartBtn.addEventListener('click',()=>{
+  gameOverMenu.style.display='none';
+  gameLoopRunning=false;
+  canvas.style.display='none';
+  showMenu();
+});
+loadBtn.addEventListener('click',()=>loadFile.click());
+loadFile.addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=event=>{
+    try{
+      const data=JSON.parse(event.target.result);
+      loadProfileFromFile(data);
+    }catch(err){
+      alert('잘못된 프로필 파일입니다.');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  loadFile.value='';
+});
+
+profileBtn.addEventListener('click',()=>{
+  menu.style.display='none';
+  profileMenu.style.display='block';
+  updateProfileDisplay();
+});
+
+profileCloseBtn.addEventListener('click',()=>{
+  profileMenu.style.display='none';
+  menu.style.display='block';
+});
+
+playerSkinSelect.addEventListener('change',e=>{
+  userProfile.selectedPlayerSkin=e.target.value;
+  saveProfile();
+});
+
+mercSkinSelect.addEventListener('change',e=>{
+  userProfile.selectedMercSkin=e.target.value;
+  saveProfile();
+});
+
+perkConfirmBtn.addEventListener('click',()=>{
+  perkMenu.style.display='none';
+  showTraitSelection();
+});
+
+nicknameConfirmBtn.addEventListener('click',setNickname);
+nicknameInput.addEventListener('keypress',e=>{
+  if(e.key==='Enter')setNickname();
+});
+
+loadProfileBtn.addEventListener('click',()=>loadProfileFile.click());
+loadProfileFile.addEventListener('change',e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=event=>{
+    try{
+      const data=JSON.parse(event.target.result);
+      loadProfileFromFile(data);
+    }catch(err){
+      alert('잘못된 프로필 파일입니다.');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  loadProfileFile.value='';
+});
+
+saveProfileBtn.addEventListener('click',saveProfileToFile);
+
+profileCloseBtn.addEventListener('click',()=>{
+  profileMenu.style.display='none';
+  menu.style.display='block';
+});
+
+const hasProfile=loadProfile();
+showNicknameMenu();
+</script>
+</body>
+</html>
