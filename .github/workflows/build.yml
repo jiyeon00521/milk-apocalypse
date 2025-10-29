@@ -1,34 +1,46 @@
-name: Build for Windows and macOS
+name: Build Mac App (auto icon, no GH_TOKEN)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  build-mac:
+    name: Build Mac .app
+    runs-on: macos-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm audit fix || true
 
-      - name: Build Electron app
-        run: npm run dist
+      - name: Ensure icon.png exists
+        run: |
+          if [ ! -f "icon.png" ]; then
+            echo "⚠️  icon.png not found, generating default icon..."
+            brew install imagemagick
+            convert -size 512x512 xc:"#222" -fill white -gravity center -pointsize 72 -annotate 0 "MA" icon.png
+            echo "✅ Default icon.png created."
+          else
+            echo "✅ Found existing icon.png"
+          fi
 
-      - name: Upload build files
-        uses: actions/upload-artifact@v4
+      - name: Build Mac App
+        run: npx electron-builder --mac --publish never
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: build-${{ matrix.os }}
+          name: milk-apocalypse-mac
           path: dist/

@@ -150,6 +150,7 @@ const player4Img=new Image(); player4Img.src='player4.png';
 const player5Img=new Image(); player5Img.src='player5.png';
 const binibigImg=new Image(); binibigImg.src='binibig.png';
 const zombieImg=new Image(); zombieImg.src='zombie.png';
+const zombie2Img=new Image(); zombie2Img.src='zombie2.png';
 const mercImg=new Image(); mercImg.src='mercenary.png';
 const merc2Img=new Image(); merc2Img.src='mercenary2.png';
 const merc3Img=new Image(); merc3Img.src='mercenary3.png';
@@ -157,6 +158,7 @@ const merc4Img=new Image(); merc4Img.src='mercenary4.png';
 const tankZombieImg=new Image(); tankZombieImg.src='tankzombie.png';
 const muscleZombieImg=new Image(); muscleZombieImg.src='musclezombie.png';
 const maskZombieImg=new Image(); maskZombieImg.src='maskzombie.png';
+const armorZombieImg=new Image(); armorZombieImg.src='armorzombie.png';
 
 let enemies=[],bullets=[],mercs=[],goldPopups=[],buffPopups=[],explosions=[];
 let clipSize=5,ammo=5,damage=1;
@@ -188,7 +190,7 @@ let mercRepairChance=0;
 let pistolStats={attackSpeedGained:0,damageGained:0,clipGained:0};
 let mercenaryStats={damageUpgrades:0,rangeUpgrades:0,mercAdded:0};
 
-let userProfile={exp:0,level:1,selectedPlayerSkin:'player.png',selectedMercSkin:'mercenary.png',nickname:'플레이어',expChance:10};
+let userProfile={exp:0,level:1,selectedPlayerSkin:'player.png',selectedMercSkin:'mercenary.png',nickname:'플레이어',expChance:10,volume:1.0};
 let selectedPerks=[];
 let highestRoundThisGame=1;
 let expAlreadyAdded=false;
@@ -286,6 +288,9 @@ function loadProfile(){
       if(data){
         if(!data.expChance){
           data.expChance=10;
+        }
+        if(data.volume===undefined){
+          data.volume=1.0;
         }
         userProfile=data;
         return true;
@@ -427,6 +432,7 @@ function isBossRoundCheck(r){return r%10===0;}
 
 function getBossType(r){
   const bossNum=Math.floor(r/10);
+  if(bossNum===4) return 'armor';
   const cycle=(bossNum-1)%3;
   if(cycle===0)return'tank';
   if(cycle===1)return'muscle';
@@ -438,8 +444,8 @@ function getBossHP(r){
   if(bossNum===1)return 150;
   if(bossNum===2)return 500;
   if(bossNum===3)return 1500;
-  if(bossNum===4)return 4000;
-  return 4000+(bossNum-4)*3000;
+  if(bossNum===4)return 10000;
+  return 10000;
 }
 
 function showTraitSelection(){
@@ -593,7 +599,20 @@ function onZombieKill(zombie){
 
 function getRoundConfig(r){
   if(isBossRoundCheck(r)){
-    return{round:r,normal:0,fast:0,spawn:0,isBoss:true};
+    return{round:r,normal:0,fast:0,red:0,spawn:0,isBoss:true};
+  }
+  
+  // 31라운드 이상: 붉은 좀비만 등장
+  if(r >= 31) {
+    const redCount = r - 26; // 31라운드 5마리, 32라운드 6마리...
+    return{
+      round:r,
+      normal:0,
+      fast:0,
+      red:redCount,
+      spawn:Math.max(150,800-(r-1)*35),
+      isBoss:false
+    };
   }
   
   // 일반 좀비: 라운드 + 4마리 (1라운드 5마리, 2라운드 6마리...)
@@ -613,13 +632,14 @@ function getRoundConfig(r){
     round:r,
     normal:normalCount,
     fast:fastCount,
+    red:0,
     spawn:Math.max(150,800-(r-1)*35),
     isBoss:false
   };
 }
 
-let normalSpawned=0,fastSpawned=0;
-function resetSpawnCounters(){normalSpawned=0;fastSpawned=0;}
+let normalSpawned=0,fastSpawned=0,redSpawned=0;
+function resetSpawnCounters(){normalSpawned=0;fastSpawned=0;redSpawned=0;}
 
 function applyZombieBuffs(r){
   // 좀비 강화 효과 제거 (항상 1.0 유지)
@@ -634,7 +654,8 @@ function spawnBoss(r){
   let size,y;
   if(bossType==='tank'){ size=300; y=canvas.height/2-size/2; }
   else if(bossType==='muscle'){ size=350; y=canvas.height/2-size/2; }
-  else { size=400; y=canvas.height/2-size/2; }
+  else if(bossType==='mask'){ size=400; y=canvas.height/2-size/2; }
+  else if(bossType==='armor'){ size=450; y=canvas.height/2-size/2; }
   enemies.push({x:canvas.width+50,y,size:size,type:bossType,maxHp:hp,hp:hp,isBoss:true,baseSpeed:0.23});
 }
 
@@ -655,22 +676,36 @@ function spawnFast(r){
   fastSpawned++;
 }
 
+function spawnRed(r){
+  const y=Math.random()*(canvas.height-80);
+  // 붉은 좀비 HP: 라운드 x 4
+  const hp=r * 4;
+  enemies.push({x:canvas.width+50+Math.random()*40,y,size:80,type:'red',maxHp:hp,hp:hp,isBoss:false,baseSpeed:0.5});
+  redSpawned++;
+}
+
 function spawnEnemy(){
   if(rewardMode||isBossRound||traitUpgradeMode||paused)return;
   const table=getRoundConfig(round);
-  if(normalSpawned>=table.normal&&fastSpawned>=table.fast){
+  if(normalSpawned>=table.normal&&fastSpawned>=table.fast&&redSpawned>=table.red){
     if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
     return;
   }
   let spawned=false;
   const r=Math.random();
+  
+  // 붉은 좀비 스폰 (31라운드 이상)
+  if(!spawned&&round>=31&&redSpawned<table.red){spawnRed(round);spawned=true;}
+  
+  // 빠른 좀비 스폰
   if(!spawned&&round>=5&&fastSpawned<table.fast&&r<0.4){spawnFast(round);spawned=true;}
+  
+  // 일반 좀비 스폰
   if(!spawned&&normalSpawned<table.normal){spawnNormal(round);spawned=true;}
   if(!spawned&&fastSpawned<table.fast){spawnFast(round);spawned=true;}
 }
 
 const rewardPool=[
-  {name:'소총 업그레이드',tier:'SS',action:()=>{if(weaponType==='권총'){weaponType='소총';autoFire=true;attackSpeed=9;playerDelay=Math.max(100,1000/(1+attackSpeed));rifleUpgradeUsed=true;}},description:'권총→소총 공격속도 MAX',weight:0.3,needsCheck:(trait)=>trait!=='pistol'&&trait!=='binibig'&&!rifleUpgradeUsed},
   {name:'공격력 +5',tier:'SS',action:()=>{damage+=5;},description:'공격력 5 증가',weight:0.5},
   {name:'공격속도 +50%',tier:'SS',action:()=>{attackSpeed+=0.5;playerDelay=Math.max(100,1000/(1+attackSpeed));},description:'공격 속도 50% 증가',weight:0.5},
   {name:'탄창 +10',tier:'SS',action:()=>{clipSize+=10;ammo+=10;},description:'탄창 크기 10 증가',weight:0.5},
@@ -1061,6 +1096,8 @@ canvas.addEventListener('mousemove',e=>{
 });
 
 function setAudioVolume(v){
+  userProfile.volume = v;
+  saveProfile();
   try{ bgm.volume=v; }catch(e){}
   try{ pistolSound.volume=v; rifleSound.volume=v; reloadSnd.volume=v; emptyClick.volume=v; }catch(e){}
 }
@@ -1147,8 +1184,8 @@ function updateRound(){
     if(bossDefeated&&!rewardMode&&!traitUpgradeMode){
       if(spawnTimerId){clearInterval(spawnTimerId);spawnTimerId=null;}
       
-      // 30 라운드 보스 클리어 시 게임 클리어
-      if(round >= 30) {
+      // 40 라운드 보스 클리어 시 게임 클리어
+      if(round >= 40) {
         gameCleared = true;
         gameOver = true;
         
@@ -1187,7 +1224,7 @@ function updateRound(){
     }
   }else{
     const table=getRoundConfig(round);
-    if(normalSpawned>=table.normal&&fastSpawned>=table.fast&&enemies.length===0&&!rewardMode){
+    if(normalSpawned>=table.normal&&fastSpawned>=table.fast&&redSpawned>=table.red&&enemies.length===0&&!rewardMode){
       
       // 라운드 클리어 보너스 경험치 지급
       let roundBonus = 0;
@@ -1301,6 +1338,8 @@ function update(){
     if(e.type==='tank'){ctx.drawImage(tankZombieImg,e.x,e.y,drawSize,drawSize);}
     else if(e.type==='muscle'){ctx.drawImage(muscleZombieImg,e.x,e.y,drawSize,drawSize);}
     else if(e.type==='mask'){ctx.drawImage(maskZombieImg,e.x,e.y,drawSize,drawSize);}
+    else if(e.type==='armor'){ctx.drawImage(armorZombieImg,e.x,e.y,drawSize,drawSize);}
+    else if(e.type==='red'){ctx.drawImage(zombie2Img,e.x,e.y,drawSize,drawSize);}
     else{ctx.drawImage(zombieImg,e.x,e.y,drawSize,drawSize);}
     const gaugeWidth=drawSize,gaugeHeight=e.isBoss?12:6,gaugeX=e.x,gaugeY=e.y-15;
     ctx.fillStyle='red';ctx.fillRect(gaugeX,gaugeY,gaugeWidth,gaugeHeight);
@@ -1351,8 +1390,8 @@ function startGameLoop(){
   }else{
     spawnTimerId=setInterval(()=>spawnEnemy(),getRoundConfig(round).spawn);
   }
-  try{ bgm.currentTime=0; setAudioVolume(1); bgm.play(); }catch(e){}
-  volumeBar.handleX=volumeBar.width;
+  try{ bgm.currentTime=0; setAudioVolume(userProfile.volume); bgm.play(); }catch(e){}
+  volumeBar.handleX=volumeBar.width * userProfile.volume;
   canvas.style.display='block';
   gameLoopRunning=true;
   update();
@@ -1414,10 +1453,11 @@ function setNickname(){
     alert('닉네임은 최대 12자까지 입력할 수 있습니다.');
     return;
   }
-  userProfile={exp:0,level:1,selectedPlayerSkin:'player.png',selectedMercSkin:'mercenary.png',nickname:newNickname,expChance:10};
+  userProfile={exp:0,level:1,selectedPlayerSkin:'player.png',selectedMercSkin:'mercenary.png',nickname:newNickname,expChance:10,volume:1.0};
   saveProfile();
   nicknameMenu.style.display='none';
   menu.style.display='block';
+  volumeBar.handleX=volumeBar.width;
   updateProfileDisplay();
 }
 
@@ -1431,11 +1471,15 @@ function loadProfileFromFile(data){
     if(!profile.expChance){
       profile.expChance=10;
     }
+    if(profile.volume===undefined){
+      profile.volume=1.0;
+    }
     userProfile=profile;
     saveProfile();
     nicknameMenu.style.display='none';
     canvas.style.display='none';
     menu.style.display='block';
+    volumeBar.handleX=volumeBar.width * userProfile.volume;
     updateProfileDisplay();
     alert(`${userProfile.nickname}님의 프로필을 불러왔습니다!\n레벨: ${userProfile.level} | 경험치: ${userProfile.exp}`);
   }catch(err){
@@ -1539,6 +1583,9 @@ profileCloseBtn.addEventListener('click',()=>{
 });
 
 const hasProfile=loadProfile();
+if(hasProfile) {
+  volumeBar.handleX=volumeBar.width * userProfile.volume;
+}
 showNicknameMenu();
 </script>
 </body>
